@@ -60,20 +60,70 @@ install_packages() {
     
     if command_exists apt-get; then
         sudo apt-get update || { log_error "Failed to update package list"; return 1; }
-        sudo apt-get install -y curl git wget build-essential zsh fzf ripgrep fd-find bat exa 2>/dev/null || {
-            log_warning "Some packages may not be available, continuing..."
-            sudo apt-get install -y curl git wget build-essential zsh fzf ripgrep fd-find bat || true
+        
+        # Core packages
+        log_info "Installing core packages..."
+        sudo apt-get install -y curl git wget build-essential software-properties-common || {
+            log_error "Failed to install core packages"
+            return 1
         }
+        
+        # Zsh and related
+        log_info "Installing Zsh..."
+        sudo apt-get install -y zsh || log_warning "Failed to install zsh"
+        
+        # Modern CLI tools
+        log_info "Installing modern CLI tools..."
+        sudo apt-get install -y fzf ripgrep fd-find bat exa 2>/dev/null || {
+            log_warning "Some modern tools not available via apt, will install manually..."
+            sudo apt-get install -y fzf ripgrep fd-find bat || true
+        }
+        
+        # Install exa manually if not available
+        if ! command_exists exa; then
+            log_info "Installing exa from binary..."
+            local exa_version="0.10.1"
+            wget -q "https://github.com/ogham/exa/releases/download/v${exa_version}/exa-linux-x86_64-v${exa_version}.zip" -O /tmp/exa.zip || {
+                log_warning "Failed to download exa"
+            }
+            if [ -f /tmp/exa.zip ]; then
+                sudo unzip -q /tmp/exa.zip -d /tmp/
+                sudo mv /tmp/bin/exa /usr/local/bin/ 2>/dev/null || true
+                rm -f /tmp/exa.zip
+            fi
+        fi
+        
+        # Install git-delta for better git diffs
+        if ! command_exists delta; then
+            log_info "Installing git-delta..."
+            local delta_version="0.17.0"
+            wget -q "https://github.com/dandavison/delta/releases/download/${delta_version}/git-delta_${delta_version}_amd64.deb" -O /tmp/delta.deb || {
+                log_warning "Failed to download git-delta"
+            }
+            if [ -f /tmp/delta.deb ]; then
+                sudo dpkg -i /tmp/delta.deb 2>/dev/null || log_warning "Failed to install git-delta"
+                rm -f /tmp/delta.deb
+            fi
+        fi
+        
+        # Create symlinks for fd and bat if needed
+        if command_exists fdfind && ! command_exists fd; then
+            sudo ln -sf $(which fdfind) /usr/local/bin/fd 2>/dev/null || true
+        fi
+        if command_exists batcat && ! command_exists bat; then
+            sudo ln -sf $(which batcat) /usr/local/bin/bat 2>/dev/null || true
+        fi
+        
     elif command_exists dnf; then
-        sudo dnf install -y curl git wget gcc gcc-c++ make zsh fzf ripgrep fd-find bat exa || {
+        sudo dnf install -y curl git wget gcc gcc-c++ make zsh fzf ripgrep fd-find bat exa git-delta || {
             log_warning "Some packages may not be available, continuing..."
         }
     elif command_exists pacman; then
-        sudo pacman -Sy --noconfirm curl git wget base-devel zsh fzf ripgrep fd bat exa || {
+        sudo pacman -Sy --noconfirm curl git wget base-devel zsh fzf ripgrep fd bat exa git-delta || {
             log_warning "Some packages may not be available, continuing..."
         }
     elif command_exists brew; then
-        brew install curl git wget zsh fzf ripgrep fd bat exa || {
+        brew install curl git wget zsh fzf ripgrep fd bat exa git-delta || {
             log_warning "Some packages may not be available, continuing..."
         }
     else
@@ -82,6 +132,15 @@ install_packages() {
     fi
     
     log_success "Packages installed"
+    echo ""
+    log_info "Installed tools:"
+    command_exists zsh && echo "  ✓ zsh ($(zsh --version 2>&1 | head -1))"
+    command_exists fzf && echo "  ✓ fzf ($(fzf --version 2>&1))"
+    command_exists rg && echo "  ✓ ripgrep ($(rg --version 2>&1 | head -1))"
+    command_exists fd && echo "  ✓ fd ($(fd --version 2>&1))"
+    command_exists bat && echo "  ✓ bat ($(bat --version 2>&1))"
+    command_exists exa && echo "  ✓ exa ($(exa --version 2>&1 | head -1))"
+    command_exists delta && echo "  ✓ git-delta ($(delta --version 2>&1))"
     return 0
 }
 
