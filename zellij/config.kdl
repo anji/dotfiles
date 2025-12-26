@@ -15,7 +15,6 @@ copy_on_select true
 scrollback_editor "nvim"
 mirror_session false
 layout_dir "$HOME/.config/zellij/layouts"
-theme_dir "$HOME/.config/zellij/themes"
 
 // Simplified UI
 simplified_ui false

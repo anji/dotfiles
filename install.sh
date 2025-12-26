@@ -183,6 +183,7 @@ install_zellij() {
     
     # Create config directory and link config
     mkdir -p "$HOME/.config/zellij"
+    mkdir -p "$HOME/.config/zellij/themes"
     backup_if_exists "$HOME/.config/zellij/config.kdl"
     rm -f "$HOME/.config/zellij/config.kdl"
     ln -sf "$DOTFILES_DIR/zellij/config.kdl" "$HOME/.config/zellij/config.kdl" || {
