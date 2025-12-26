@@ -99,8 +99,8 @@ keybinds clear-defaults=true {
         // Tab mode
         bind "Ctrl t" { SwitchToMode "Tab"; }
         
-        // Resize mode
-        bind "Ctrl r" { SwitchToMode "Resize"; }
+        // Resize mode (Ctrl+R reserved for shell history search)
+        bind "Ctrl n" { SwitchToMode "Resize"; }
         
         // Move mode
         bind "Ctrl m" { SwitchToMode "Move"; }
@@ -118,7 +118,7 @@ keybinds clear-defaults=true {
     }
     
     resize {
-        bind "Ctrl r" { SwitchToMode "Normal"; }
+        bind "Ctrl n" { SwitchToMode "Normal"; }
         bind "h" "Left" { Resize "Increase Left"; }
         bind "j" "Down" { Resize "Increase Down"; }
         bind "k" "Up" { Resize "Increase Up"; }
