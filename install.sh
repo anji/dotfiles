@@ -79,6 +79,13 @@ install_packages() {
             sudo apt-get install -y fzf ripgrep fd-find bat || true
         }
         
+        # Optional productivity tools
+        log_info "Installing optional productivity tools..."
+        sudo apt-get install -y tldr tree neofetch lsof net-tools unzip jq 2>/dev/null || {
+            log_warning "Some optional tools may not be available"
+            sudo apt-get install -y tree lsof net-tools unzip || true
+        }
+        
         # Install exa manually if not available
         if ! command_exists exa; then
             log_info "Installing exa from binary..."
@@ -115,15 +122,15 @@ install_packages() {
         fi
         
     elif command_exists dnf; then
-        sudo dnf install -y curl git wget gcc gcc-c++ make zsh fzf ripgrep fd-find bat exa git-delta || {
+        sudo dnf install -y curl git wget gcc gcc-c++ make zsh fzf ripgrep fd-find bat exa git-delta tldr tree neofetch lsof net-tools jq || {
             log_warning "Some packages may not be available, continuing..."
         }
     elif command_exists pacman; then
-        sudo pacman -Sy --noconfirm curl git wget base-devel zsh fzf ripgrep fd bat exa git-delta || {
+        sudo pacman -Sy --noconfirm curl git wget base-devel zsh fzf ripgrep fd bat exa git-delta tldr tree neofetch lsof net-tools jq || {
             log_warning "Some packages may not be available, continuing..."
         }
     elif command_exists brew; then
-        brew install curl git wget zsh fzf ripgrep fd bat exa git-delta || {
+        brew install curl git wget zsh fzf ripgrep fd bat exa git-delta tldr tree neofetch lsof jq || {
             log_warning "Some packages may not be available, continuing..."
         }
     else
@@ -141,6 +148,10 @@ install_packages() {
     command_exists bat && echo "  ✓ bat ($(bat --version 2>&1))"
     command_exists exa && echo "  ✓ exa ($(exa --version 2>&1 | head -1))"
     command_exists delta && echo "  ✓ git-delta ($(delta --version 2>&1))"
+    command_exists tldr && echo "  ✓ tldr"
+    command_exists tree && echo "  ✓ tree"
+    command_exists neofetch && echo "  ✓ neofetch"
+    command_exists jq && echo "  ✓ jq ($(jq --version 2>&1))"
     return 0
 }
 
