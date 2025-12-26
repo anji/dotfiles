@@ -350,6 +350,35 @@ install_neovim() {
         }
     fi
     
+    # Link core NvChad config files
+    if [ -f "$DOTFILES_DIR/nvim/init.lua" ]; then
+        rm -f "$HOME/.config/nvim/init.lua"
+        ln -sf "$DOTFILES_DIR/nvim/init.lua" "$HOME/.config/nvim/init.lua" || {
+            log_warning "Failed to link init.lua"
+        }
+    fi
+    
+    if [ -f "$DOTFILES_DIR/nvim/options.lua" ]; then
+        rm -f "$HOME/.config/nvim/lua/options.lua"
+        ln -sf "$DOTFILES_DIR/nvim/options.lua" "$HOME/.config/nvim/lua/options.lua" || {
+            log_warning "Failed to link options.lua"
+        }
+    fi
+    
+    if [ -f "$DOTFILES_DIR/nvim/mappings.lua" ]; then
+        rm -f "$HOME/.config/nvim/lua/mappings.lua"
+        ln -sf "$DOTFILES_DIR/nvim/mappings.lua" "$HOME/.config/nvim/lua/mappings.lua" || {
+            log_warning "Failed to link mappings.lua"
+        }
+    fi
+    
+    if [ -d "$DOTFILES_DIR/nvim/plugins" ]; then
+        rm -rf "$HOME/.config/nvim/lua/plugins"
+        ln -sf "$DOTFILES_DIR/nvim/plugins" "$HOME/.config/nvim/lua/plugins" || {
+            log_warning "Failed to link plugins directory"
+        }
+    fi
+    
     log_success "Neovim with NvChad setup complete"
     log_info "Run 'nvim' and wait for plugins to install"
     return 0
