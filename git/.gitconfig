@@ -1,0 +1,199 @@
+[user]
+    name = Anjani
+    email = anjisticL@gmail.com
+    
+[core]
+    editor = nvim
+    autocrlf = input
+    excludesfile = ~/.gitignore_global
+    pager = delta
+
+[interactive]
+    diffFilter = delta --color-only
+
+[delta]
+    navigate = true
+    light = false
+    side-by-side = true
+    line-numbers = true
+
+[merge]
+    conflictstyle = diff3
+
+[diff]
+    colorMoved = default
+
+[init]
+    defaultBranch = main
+
+[pull]
+    rebase = false
+
+[push]
+    default = current
+    autoSetupRemote = true
+
+[fetch]
+    prune = true
+
+[rebase]
+    autoStash = true
+
+[color]
+    ui = auto
+    branch = auto
+    diff = auto
+    status = auto
+
+[color "branch"]
+    current = yellow reverse
+    local = yellow
+    remote = green
+
+[color "diff"]
+    meta = yellow bold
+    frag = magenta bold
+    old = red bold
+    new = green bold
+
+[color "status"]
+    added = green
+    changed = yellow
+    untracked = red
+
+# Aliases
+[alias]
+    # Basic shortcuts
+    st = status -sb
+    co = checkout
+    br = branch
+    ci = commit
+    cm = commit -m
+    ca = commit --amend
+    cane = commit --amend --no-edit
+    
+    # Branch management
+    branches = branch -a
+    tags = tag -l
+    remotes = remote -v
+    
+    # Status and diff
+    s = status -s
+    ss = status
+    d = diff
+    ds = diff --staged
+    dc = diff --cached
+    
+    # Log aliases
+    l = log --oneline --decorate --graph
+    ll = log --oneline --decorate --graph --all
+    lg = log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit
+    lga = log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit --all
+    hist = log --pretty=format:'%h %ad | %s%d [%an]' --graph --date=short
+    
+    # Show verbose output about tags, branches or remotes
+    tags-list = tag -n1 -l
+    branches-list = branch -a -v
+    remotes-list = remote -v
+    
+    # Amend the currently staged files to the latest commit
+    amend = commit --amend --reuse-message=HEAD
+    
+    # Credit an author on the latest commit
+    credit = "!f() { git commit --amend --author \"$1 <$2>\" -C HEAD; }; f"
+    
+    # Interactive rebase with the given number of latest commits
+    reb = "!r() { git rebase -i HEAD~$1; }; r"
+    
+    # Find branches containing commit
+    fb = "!f() { git branch -a --contains $1; }; f"
+    
+    # Find tags containing commit
+    ft = "!f() { git describe --always --contains $1; }; f"
+    
+    # Find commits by source code
+    fc = "!f() { git log --pretty=format:'%C(yellow)%h  %Cblue%ad  %Creset%s%Cgreen  [%cn] %Cred%d' --decorate --date=short -S$1; }; f"
+    
+    # Find commits by commit message
+    fm = "!f() { git log --pretty=format:'%C(yellow)%h  %Cblue%ad  %Creset%s%Cgreen  [%cn] %Cred%d' --decorate --date=short --grep=$1; }; f"
+    
+    # Remove branches that have already been merged with main
+    dm = "!git branch --merged | grep -v '\\*' | xargs -n 1 git branch -d"
+    
+    # List contributors with number of commits
+    contributors = shortlog --summary --numbered
+    
+    # Undo last commit but keep changes
+    undo = reset HEAD~1 --mixed
+    
+    # Reset hard to origin
+    reset-hard = "!f() { git fetch origin && git reset --hard origin/$(git branch --show-current); }; f"
+    
+    # Stash shortcuts
+    stash-all = stash save --include-untracked
+    unstash = stash pop
+    
+    # Show the diff between the latest commit and the current state
+    difflast = diff HEAD~1..HEAD
+    
+    # Show modified files in last commit
+    dl = "!git ll -1"
+    
+    # Show a diff last commit
+    dlc = diff --cached HEAD^
+    
+    # Pull with rebase
+    pr = pull --rebase
+    
+    # Push current branch
+    ps = push
+    psf = push --force-with-lease
+    
+    # Clone with all submodules
+    clone-recursive = clone --recursive
+    
+    # Update all submodules
+    submodule-update = submodule update --init --recursive
+    
+    # Show ignored files
+    ignored = ls-files --others --ignored --exclude-standard
+    
+    # Checkout previous branch
+    co-prev = checkout -
+    
+    # Create new branch and switch to it
+    cob = checkout -b
+    
+    # Delete branch
+    del = branch -d
+    delforce = branch -D
+    
+    # Sync with upstream
+    sync = "!f() { git fetch upstream && git checkout main && git merge upstream/main; }; f"
+    
+    # Create a new branch from main
+    new = "!f() { git checkout main && git pull && git checkout -b $1; }; f"
+    
+    # Quickly save work in progress
+    wip = "!git add -A && git commit -m 'WIP'"
+    
+    # Undo wip
+    unwip = "!git log -n 1 | grep -q -c 'WIP' && git reset HEAD~1"
+    
+    # Quick commit with timestamp
+    quicksave = "!git add -A && git commit -m \"Quicksave: $(date)\""
+    
+    # Show all aliases
+    aliases = config --get-regexp alias
+
+[help]
+    autocorrect = 1
+
+[credential]
+    helper = cache --timeout=3600
+
+[filter "lfs"]
+    clean = git-lfs clean -- %f
+    smudge = git-lfs smudge -- %f
+    process = git-lfs filter-process
+    required = true

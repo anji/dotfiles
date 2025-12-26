@@ -1,0 +1,36 @@
+# .gitignore for dotfiles repository
+
+# Backup directories
+.dotfiles_backup_*/
+
+# OS Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+Desktop.ini
+
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# Personal configuration that shouldn't be shared
+# Uncomment if you have personal configs you don't want to commit
+# git/.gitconfig
+# shell/.env
+
+# Notes and drafts
+notes/
+drafts/

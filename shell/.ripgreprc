@@ -1,0 +1,51 @@
+# Ripgrep configuration file
+
+# Search hidden files and directories
+
+--hidden
+
+# Follow symbolic links
+
+--follow
+
+# Don't respect gitignore files
+
+# --no-ignore
+
+# Case insensitive search unless pattern has uppercase letters
+
+--smart-case
+
+# Use glob patterns
+
+--glob=!.git/_
+--glob=!node_modules/_
+--glob=!dist/_
+--glob=!build/_
+--glob=!target/_
+--glob=!.cache/_
+--glob=!\*.lock
+--glob=!package-lock.json
+--glob=!yarn.lock
+
+# Sort by file path
+
+# --sort=path
+
+# Maximum columns to search (helps with minified files)
+
+--max-columns=500
+
+# Add custom types
+
+--type-add=web:_.{html,css,js,jsx,ts,tsx}
+--type-add=config:_.{json,yaml,yml,toml,conf,config,ini}
+
+# Colors
+
+--colors=line:fg:yellow
+--colors=line:style:bold
+--colors=path:fg:green
+--colors=path:style:bold
+--colors=match:fg:red
+--colors=match:style:bold

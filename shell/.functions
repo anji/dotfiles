@@ -1,0 +1,498 @@
+# ============================================================================
+# Shell Functions - Advanced Productivity Utilities
+# ============================================================================
+
+# ============================================================================
+# Directory Navigation
+# ============================================================================
+
+# Create directory and cd into it
+mkcd() {
+    mkdir -p "$1" && cd "$1"
+}
+
+# Go up n directories
+up() {
+    local d=""
+    local limit="$1"
+    
+    if [ -z "$limit" ] || [ "$limit" -le 0 ]; then
+        limit=1
+    fi
+    
+    for ((i=1;i<=limit;i++)); do
+        d="../$d"
+    done
+    
+    cd "$d" || return
+}
+
+# Find and cd to a directory
+fcd() {
+    local dir
+    dir=$(find . -type d -name "*$1*" 2>/dev/null | fzf) && cd "$dir" || return
+}
+
+# ============================================================================
+# File Operations
+# ============================================================================
+
+# Find file by name and edit
+fe() {
+    local file
+    file=$(fzf --preview 'bat --color=always --style=numbers --line-range=:500 {}') && nvim "$file"
+}
+
+# Find in files and open in editor
+fif() {
+    if [ ! "$#" -gt 0 ]; then
+        echo "Need a string to search for!"
+        return 1
+    fi
+    local file
+    file=$(rg --files-with-matches --no-messages "$1" | fzf --preview "bat --color=always --highlight-line {2} {1}") && nvim "$file"
+}
+
+# Backup a file
+backup() {
+    cp "$1"{,.backup-$(date +%Y%m%d-%H%M%S)}
+}
+
+# Create a backup and edit
+bak() {
+    local file="$1"
+    cp "$file" "${file}.bak.$(date +%Y%m%d_%H%M%S)"
+    echo "Backup created: ${file}.bak.$(date +%Y%m%d_%H%M%S)"
+}
+
+# ============================================================================
+# Git Functions
+# ============================================================================
+
+# Unalias conflicting git plugin aliases and other oh-my-zsh aliases
+unalias gcl 2>/dev/null || true
+unalias glog 2>/dev/null || true
+unalias extract 2>/dev/null || true
+unalias myip 2>/dev/null || true
+unalias localip 2>/dev/null || true
+unalias note 2>/dev/null || true
+
+# Git clone and cd into directory
+gcl() {
+    git clone "$1" && cd "$(basename "$1" .git)" || return
+}
+
+# Quick commit all changes
+gac() {
+    git add .
+    git commit -m "$1"
+}
+
+# Quick commit and push
+gacp() {
+    git add .
+    git commit -m "$1"
+    git push
+}
+
+# Git log with fzf
+glog() {
+    git log --oneline --decorate --graph --all | fzf --ansi --no-sort --reverse --multi --bind 'ctrl-s:toggle-sort' \
+        --header 'Press CTRL-S to toggle sort' \
+        --preview 'grep -o "[a-f0-9]\{7,\}" <<< {} | head -1 | xargs git show --color=always' \
+        --preview-window=right:60%
+}
+
+# Interactive git add
+gai() {
+    git status --short | fzf --multi --preview 'git diff --color=always {2}' | awk '{print $2}' | xargs git add
+}
+
+# Interactive branch checkout
+gch() {
+    local branch
+    branch=$(git branch -a | grep -v HEAD | sed 's/remotes\/origin\///g' | sort -u | fzf) && git checkout "$branch"
+}
+
+# Create new branch from main/master
+gnb() {
+    if [ -z "$1" ]; then
+        echo "Branch name required"
+        return 1
+    fi
+    
+    local main_branch
+    main_branch=$(git branch -a | grep -E 'main$|master$' | head -1 | sed 's/^[* ]*//')
+    
+    git checkout "$main_branch" && git pull && git checkout -b "$1"
+}
+
+# Git diff with bat
+gdiff() {
+    git diff --name-only --diff-filter=d | xargs bat --diff
+}
+
+# ============================================================================
+# Docker Functions
+# ============================================================================
+
+# Docker remove all stopped containers
+drm-stopped() {
+    docker rm $(docker ps -a -q -f status=exited)
+}
+
+# Docker remove dangling images
+drm-dangling() {
+    docker rmi $(docker images -f "dangling=true" -q)
+}
+
+# Docker interactive exec
+dsh() {
+    local container
+    container=$(docker ps --format '{{.Names}}' | fzf) && docker exec -it "$container" /bin/bash
+}
+
+# Docker logs with fzf
+dlg() {
+    local container
+    container=$(docker ps --format '{{.Names}}' | fzf) && docker logs -f "$container"
+}
+
+# Docker stats for specific container
+dstats() {
+    local container
+    container=$(docker ps --format '{{.Names}}' | fzf) && docker stats "$container"
+}
+
+# ============================================================================
+# Process Management
+# ============================================================================
+
+# Kill process by name with fzf
+fkill() {
+    local pid
+    pid=$(ps aux | sed 1d | fzf --multi | awk '{print $2}')
+    
+    if [ -n "$pid" ]; then
+        echo "$pid" | xargs kill -${1:-9}
+    fi
+}
+
+# Find and kill process by port
+killport() {
+    if [ -z "$1" ]; then
+        echo "Usage: killport <port>"
+        return 1
+    fi
+    lsof -ti:"$1" | xargs kill -9
+}
+
+# ============================================================================
+# Network Functions
+# ============================================================================
+
+# Get external IP
+myip() {
+    curl -s ifconfig.me
+}
+
+# Get local IP
+localip() {
+    ip addr show | grep 'inet ' | grep -v '127.0.0.1' | awk '{print $2}' | cut -d/ -f1
+}
+
+# Test website response time
+webping() {
+    curl -o /dev/null -s -w "Connect: %{time_connect}s\nStart Transfer: %{time_starttransfer}s\nTotal: %{time_total}s\n" "$1"
+}
+
+# Download entire website
+webgrab() {
+    wget --recursive --no-clobber --page-requisites --html-extension --convert-links --restrict-file-names=windows --domains "$1" --no-parent "$1"
+}
+
+# ============================================================================
+# System Information
+# ============================================================================
+
+# Disk usage of current directory with sorting
+duf() {
+    du -sh ./* | sort -hr
+}
+
+# Find largest files in directory
+largest() {
+    local num="${1:-10}"
+    find . -type f -exec ls -lh {} \; | sort -k5 -hr | head -n "$num"
+}
+
+# Find largest directories
+largest-dirs() {
+    local num="${1:-10}"
+    du -h --max-depth=1 | sort -hr | head -n "$num"
+}
+
+# System resource usage
+resource() {
+    echo "=== CPU Usage ==="
+    top -bn1 | grep "Cpu(s)" | sed "s/.*, *\([0-9.]*\)%* id.*/\1/" | awk '{print 100 - $1"%"}'
+    echo ""
+    echo "=== Memory Usage ==="
+    free -h | awk '/^Mem:/ {print $3 "/" $2}'
+    echo ""
+    echo "=== Disk Usage ==="
+    df -h / | awk 'NR==2 {print $3 "/" $2 " (" $5 ")"}'
+}
+
+# ============================================================================
+# Development Functions
+# ============================================================================
+
+# Create Python virtual environment and activate
+venv-create() {
+    local venv_name="${1:-.venv}"
+    python3 -m venv "$venv_name"
+    source "$venv_name/bin/activate"
+    pip install --upgrade pip
+}
+
+# Find and activate Python virtual environment
+venv-activate() {
+    local venv_dir
+    venv_dir=$(find . -maxdepth 3 -name "activate" -path "*/bin/activate" 2>/dev/null | head -1)
+    if [ -n "$venv_dir" ]; then
+        source "$venv_dir"
+        echo "Activated: $venv_dir"
+    else
+        echo "No virtual environment found"
+    fi
+}
+
+# Quick HTTP server
+serve() {
+    local port="${1:-8000}"
+    python3 -m http.server "$port"
+}
+
+# JSON pretty print
+json() {
+    if [ -t 0 ]; then
+        # Argument provided
+        python3 -m json.tool <<< "$*" | less
+    else
+        # Pipe
+        python3 -m json.tool | less
+    fi
+}
+
+# Generate random string
+randstr() {
+    local length="${1:-32}"
+    openssl rand -base64 "$length"
+}
+
+# Generate UUID
+uuid() {
+    uuidgen | tr '[:upper:]' '[:lower:]'
+}
+
+# ============================================================================
+# Text Processing
+# ============================================================================
+
+# Count lines of code in project
+loc() {
+    local dir="${1:-.}"
+    echo "Lines of code in $dir:"
+    find "$dir" -type f \( -name "*.py" -o -name "*.js" -o -name "*.go" -o -name "*.rs" -o -name "*.java" -o -name "*.c" -o -name "*.cpp" -o -name "*.sh" \) -exec wc -l {} + | sort -rn | head -20
+}
+
+# Remove trailing whitespace
+trim() {
+    sed -i 's/[[:space:]]*$//' "$1"
+}
+
+# Convert to lowercase
+lowercase() {
+    echo "$1" | tr '[:upper:]' '[:lower:]'
+}
+
+# Convert to uppercase
+uppercase() {
+    echo "$1" | tr '[:lower:]' '[:upper:]'
+}
+
+# ============================================================================
+# Kubernetes Functions
+# ============================================================================
+
+# Kubectl get pods with fzf
+kgpf() {
+    kubectl get pods | fzf --header-lines=1
+}
+
+# Kubectl exec into pod
+kexec() {
+    local pod
+    pod=$(kubectl get pods --no-headers | fzf | awk '{print $1}')
+    if [ -n "$pod" ]; then
+        kubectl exec -it "$pod" -- /bin/bash
+    fi
+}
+
+# Kubectl logs with fzf
+klogs() {
+    local pod
+    pod=$(kubectl get pods --no-headers | fzf | awk '{print $1}')
+    if [ -n "$pod" ]; then
+        kubectl logs -f "$pod"
+    fi
+}
+
+# Switch kubectl context
+kctx() {
+    local context
+    context=$(kubectl config get-contexts -o name | fzf)
+    if [ -n "$context" ]; then
+        kubectl config use-context "$context"
+    fi
+}
+
+# Switch kubectl namespace
+kns() {
+    local namespace
+    namespace=$(kubectl get namespaces -o name | sed 's/namespace\///' | fzf)
+    if [ -n "$namespace" ]; then
+        kubectl config set-context --current --namespace="$namespace"
+    fi
+}
+
+# ============================================================================
+# Tmux Functions (if using tmux as fallback)
+# ============================================================================
+
+# Create new tmux session
+ta() {
+    if [ -z "$1" ]; then
+        tmux attach || tmux new
+    else
+        tmux attach -t "$1" || tmux new -s "$1"
+    fi
+}
+
+# ============================================================================
+# Archive Functions
+# ============================================================================
+
+# Extract any archive
+extract() {
+    if [ -f "$1" ]; then
+        case "$1" in
+            *.tar.bz2)   tar xjf "$1"     ;;
+            *.tar.gz)    tar xzf "$1"     ;;
+            *.tar.xz)    tar xJf "$1"     ;;
+            *.bz2)       bunzip2 "$1"     ;;
+            *.rar)       unrar x "$1"     ;;
+            *.gz)        gunzip "$1"      ;;
+            *.tar)       tar xf "$1"      ;;
+            *.tbz2)      tar xjf "$1"     ;;
+            *.tgz)       tar xzf "$1"     ;;
+            *.zip)       unzip "$1"       ;;
+            *.Z)         uncompress "$1"  ;;
+            *.7z)        7z x "$1"        ;;
+            *.deb)       ar x "$1"        ;;
+            *.tar.zst)   tar -I zstd -xf "$1" ;;
+            *)           echo "'$1' cannot be extracted via extract()" ;;
+        esac
+    else
+        echo "'$1' is not a valid file"
+    fi
+}
+
+# Create archive
+compress() {
+    if [ -z "$1" ]; then
+        echo "Usage: compress <file/directory> [format]"
+        echo "Formats: tar.gz (default), tar.bz2, tar.xz, zip"
+        return 1
+    fi
+    
+    local format="${2:-tar.gz}"
+    local name=$(basename "$1")
+    
+    case "$format" in
+        tar.gz)  tar czf "$name.tar.gz" "$1"  ;;
+        tar.bz2) tar cjf "$name.tar.bz2" "$1" ;;
+        tar.xz)  tar cJf "$name.tar.xz" "$1"  ;;
+        zip)     zip -r "$name.zip" "$1"      ;;
+        *)       echo "Unknown format: $format" ;;
+    esac
+}
+
+# ============================================================================
+# Productivity Functions
+# ============================================================================
+
+# Quick note taking
+note() {
+    local notes_dir="$HOME/notes"
+    mkdir -p "$notes_dir"
+    local note_file="$notes_dir/$(date +%Y-%m-%d).md"
+    
+    if [ ! -f "$note_file" ]; then
+        echo "# Notes for $(date +%Y-%m-%d)" > "$note_file"
+        echo "" >> "$note_file"
+    fi
+    
+    nvim + "$note_file"
+}
+
+# Quick todo management
+todo() {
+    local todo_file="$HOME/todo.md"
+    
+    if [ -z "$1" ]; then
+        nvim "$todo_file"
+    else
+        echo "- [ ] $*" >> "$todo_file"
+        echo "Added: $*"
+    fi
+}
+
+# Timer function
+timer() {
+    local duration="$1"
+    if [ -z "$duration" ]; then
+        echo "Usage: timer <duration>"
+        echo "Examples: timer 5m, timer 1h, timer 30s"
+        return 1
+    fi
+    
+    sleep "$duration" && echo "Timer finished!" && notify-send "Timer" "Time's up!"
+}
+
+# ============================================================================
+# Path Management
+# ============================================================================
+
+# Add to PATH if not already present
+pathadd() {
+    if [ -d "$1" ] && [[ ":$PATH:" != *":$1:"* ]]; then
+        export PATH="$1:$PATH"
+    fi
+}
+
+# Show PATH in readable format
+showpath() {
+    echo "$PATH" | tr ':' '\n'
+}
+
+# ============================================================================
+# Help Functions
+# ============================================================================
+
+# Show all custom functions
+showfunctions() {
+    echo "Available custom functions:"
+    grep "^[a-z].*() {" ~/.functions | sed 's/() {//' | sort
+}
