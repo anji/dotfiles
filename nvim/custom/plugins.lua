@@ -8,7 +8,7 @@ local plugins = {
   {
     "neovim/nvim-lspconfig",
     config = function()
-      require "plugins.configs.lspconfig"
+      require "nvchad.configs.lspconfig"
       require "custom.configs.lspconfig"
     end,
   },
@@ -248,6 +248,33 @@ local plugins = {
   --   "github/copilot.vim",
   --   event = "InsertEnter",
   -- },
+
+  -- Auto-save plugin
+  {
+    "pocco81/auto-save.nvim",
+    event = { "InsertLeave", "TextChanged" },
+    opts = {
+      enabled = true,
+      execution_message = {
+        message = function()
+          return ""  -- Disable save messages to avoid clutter
+        end,
+      },
+      trigger_events = { "InsertLeave", "TextChanged" },
+      condition = function(buf)
+        local fn = vim.fn
+        local utils = require("auto-save.utils.data")
+        
+        -- Don't autosave for certain filetypes
+        if utils.not_in(fn.getbufvar(buf, "&filetype"), { "gitcommit", "gitrebase" }) then
+          return true
+        end
+        return false
+      end,
+      write_all_buffers = false,
+      debounce_delay = 135,
+    },
+  },
 }
 
 return plugins

@@ -1,7 +1,10 @@
 -- LSP Configuration
 
-local on_attach = require("plugins.configs.lspconfig").on_attach
-local capabilities = require("plugins.configs.lspconfig").capabilities
+-- Suppress deprecation warning until nvim-lspconfig v3.0.0
+vim.deprecate = function() end
+
+local on_attach = require("nvchad.configs.lspconfig").on_attach
+local capabilities = require("nvchad.configs.lspconfig").capabilities
 
 local lspconfig = require "lspconfig"
 
@@ -9,7 +12,7 @@ local lspconfig = require "lspconfig"
 local servers = {
   "html",
   "cssls",
-  "tsserver",
+  "ts_ls",
   "pyright",
   "gopls",
   "rust_analyzer",
@@ -73,7 +76,7 @@ lspconfig.rust_analyzer.setup {
 }
 
 -- TypeScript/JavaScript configuration
-lspconfig.tsserver.setup {
+lspconfig.ts_ls.setup {
   on_attach = on_attach,
   capabilities = capabilities,
   settings = {
@@ -103,23 +106,24 @@ lspconfig.tsserver.setup {
 }
 
 -- Lua configuration (for Neovim config editing)
-lspconfig.lua_ls.setup {
-  on_attach = on_attach,
-  capabilities = capabilities,
-  settings = {
-    Lua = {
-      diagnostics = {
-        globals = { "vim" },
-      },
-      workspace = {
-        library = {
-          [vim.fn.expand "$VIMRUNTIME/lua"] = true,
-          [vim.fn.expand "$VIMRUNTIME/lua/vim/lsp"] = true,
-          [vim.fn.stdpath "data" .. "/lazy/lazy.nvim/lua/lazy"] = true,
-        },
-        maxPreload = 100000,
-        preloadFileSize = 10000,
-      },
-    },
-  },
-}
+-- Commented out - install lua-language-server via :MasonInstall lua-language-server if needed
+-- lspconfig.lua_ls.setup {
+--   on_attach = on_attach,
+--   capabilities = capabilities,
+--   settings = {
+--     Lua = {
+--       diagnostics = {
+--         globals = { "vim" },
+--       },
+--       workspace = {
+--         library = {
+--           [vim.fn.expand "$VIMRUNTIME/lua"] = true,
+--           [vim.fn.expand "$VIMRUNTIME/lua/vim/lsp"] = true,
+--           [vim.fn.stdpath "data" .. "/lazy/lazy.nvim/lua/lazy"] = true,
+--         },
+--         maxPreload = 100000,
+--         preloadFileSize = 10000,
+--       },
+--     },
+--   },
+-- }
