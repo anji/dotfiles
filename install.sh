@@ -370,6 +370,62 @@ setup_additional_tools() {
     return 0
 }
 
+# Install Nerd Fonts for icons
+install_nerd_fonts() {
+    log_info "Installing Nerd Fonts for icon support..."
+    
+    local font_dir
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        font_dir="$HOME/Library/Fonts"
+    else
+        font_dir="$HOME/.local/share/fonts"
+    fi
+    
+    mkdir -p "$font_dir"
+    
+    # Install popular Nerd Fonts
+    local fonts=("FiraCode" "JetBrainsMono" "Hack")
+    
+    for font in "${fonts[@]}"; do
+        if ! fc-list | grep -qi "$font.*Nerd"; then
+            log_info "Installing $font Nerd Font..."
+            
+            local url="https://github.com/ryanoasis/nerd-fonts/releases/latest/download/${font}.tar.xz"
+            local temp_file="/tmp/${font}.tar.xz"
+            
+            curl -fLo "$temp_file" "$url" 2>/dev/null || {
+                log_warning "Failed to download $font, skipping..."
+                continue
+            }
+            
+            tar -xf "$temp_file" -C "$font_dir" 2>/dev/null || {
+                log_warning "Failed to extract $font, skipping..."
+                rm -f "$temp_file"
+                continue
+            }
+            
+            rm -f "$temp_file"
+            log_success "$font Nerd Font installed"
+        else
+            log_info "$font Nerd Font already installed"
+        fi
+    done
+    
+    # Refresh font cache
+    if command_exists fc-cache; then
+        log_info "Refreshing font cache..."
+        fc-cache -fv >/dev/null 2>&1
+    fi
+    
+    log_success "Nerd Fonts installation complete"
+    echo ""
+    log_info "Remember to set your terminal font to one of:"
+    echo "  - FiraCode Nerd Font"
+    echo "  - JetBrainsMono Nerd Font"
+    echo "  - Hack Nerd Font"
+    return 0
+}
+
 # Change default shell to zsh
 change_shell() {
     if [ "$SHELL" != "$(which zsh)" ]; then
@@ -401,39 +457,45 @@ main() {
         echo ""
         
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-        echo "Step 1/6: Installing system packages..."
+        echo "Step 1/7: Installing system packages..."
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         install_packages || failed_components+=("packages")
         
         echo ""
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-        echo "Step 2/6: Setting up Zsh and plugins..."
+        echo "Step 2/7: Setting up Zsh and plugins..."
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         install_zsh || failed_components+=("zsh")
         
         echo ""
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-        echo "Step 3/6: Installing Zellij..."
+        echo "Step 3/7: Installing Zellij..."
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         install_zellij || failed_components+=("zellij")
         
         echo ""
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-        echo "Step 4/6: Setting up Neovim with NvChad..."
+        echo "Step 4/7: Setting up Neovim with NvChad..."
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         install_neovim || failed_components+=("neovim")
         
         echo ""
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-        echo "Step 5/6: Configuring Git..."
+        echo "Step 5/7: Configuring Git..."
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         setup_git || failed_components+=("git")
         
         echo ""
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-        echo "Step 6/6: Setting up additional tools..."
+        echo "Step 6/7: Setting up additional tools..."
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         setup_additional_tools || failed_components+=("tools")
+        
+        echo ""
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "Step 7/7: Installing Nerd Fonts..."
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        install_nerd_fonts || failed_components+=("fonts")
         
         echo ""
         change_shell || true  # Don't fail if shell change fails
@@ -456,6 +518,7 @@ main() {
         echo "5) Git configuration"
         echo "6) Additional tools (fzf, aliases, etc.)"
         echo "7) Install system packages"
+        echo "8) Install Nerd Fonts"
         echo "0) Exit"
         echo ""
         read -p "Enter your choice (comma-separated for multiple): " choices
@@ -471,6 +534,7 @@ main() {
                     install_neovim
                     setup_git
                     setup_additional_tools
+                    install_nerd_fonts
                     change_shell
                     ;;
                 2) install_zsh ;;
@@ -479,6 +543,7 @@ main() {
                 5) setup_git ;;
                 6) setup_additional_tools ;;
                 7) install_packages ;;
+                8) install_nerd_fonts ;;
                 0) exit 0 ;;
                 *) log_error "Invalid option: $choice" ;;
             esac
