@@ -304,28 +304,53 @@ install_zellij_binary() {
 install_neovim() {
     log_info "Setting up Neovim with NvChad..."
     
-    if ! command_exists nvim; then
-        log_info "Installing Neovim..."
-        if command_exists apt-get; then
-            # Try PPA first
-            sudo add-apt-repository ppa:neovim-ppa/stable -y 2>/dev/null || log_warning "Failed to add PPA"
-            sudo apt-get update 2>/dev/null
-            sudo apt-get install -y neovim || {
-                log_warning "Failed to install Neovim from PPA, trying AppImage..."
-                install_neovim_appimage
-            }
-        elif command_exists brew; then
-            brew install neovim || {
-                log_error "Failed to install Neovim"
-                return 1
-            }
-        else
-            log_warning "Installing Neovim AppImage..."
-            install_neovim_appimage || return 1
+    # Check if old version exists and back it up
+    if command_exists nvim; then
+        local nvim_path=$(which nvim)
+        local nvim_version=$(nvim --version | head -1)
+        log_info "Found existing Neovim installation: $nvim_version at $nvim_path"
+        
+        # Backup old Neovim binary
+        if [ -f "$nvim_path" ]; then
+            mkdir -p "$BACKUP_DIR"
+            local backup_name="nvim_backup_$(date +%Y%m%d_%H%M%S)"
+            log_info "Backing up old Neovim binary to $BACKUP_DIR/$backup_name"
+            sudo cp "$nvim_path" "$BACKUP_DIR/$backup_name" 2>/dev/null || \
+                cp "$nvim_path" "$BACKUP_DIR/$backup_name" 2>/dev/null || \
+                log_warning "Could not backup old Neovim binary"
         fi
-    else
-        log_info "Neovim already installed"
+        
+        # Remove old installation
+        log_info "Removing old Neovim installation..."
+        if [ -d "/usr/local/nvim" ]; then
+            sudo rm -rf /usr/local/nvim
+        fi
+        if [ -f "/usr/local/bin/nvim" ]; then
+            sudo rm -f /usr/local/bin/nvim
+        fi
+        
+        # Remove PPA-installed version if exists
+        if command_exists apt-get && dpkg -l | grep -q "neovim"; then
+            log_info "Removing old PPA version of Neovim..."
+            sudo apt-get remove -y neovim 2>/dev/null || log_warning "Could not remove PPA Neovim"
+        fi
     fi
+    
+    # Install fresh Neovim
+    log_info "Installing latest Neovim..."
+    if command_exists brew; then
+        # macOS - use brew
+        brew install neovim || {
+            log_error "Failed to install Neovim"
+            return 1
+        }
+    else
+        # Linux - use latest AppImage from GitHub releases
+        log_info "Installing latest Neovim AppImage from GitHub..."
+        install_neovim_appimage || return 1
+    fi
+    
+    log_success "Neovim installed successfully ($(nvim --version | head -1))"
     
     # Backup existing nvim config
     backup_if_exists "$HOME/.config/nvim"
@@ -386,20 +411,74 @@ install_neovim() {
 
 # Helper function to install Neovim AppImage
 install_neovim_appimage() {
-    log_info "Downloading Neovim AppImage..."
-    curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim.appimage || {
+    log_info "Downloading latest Neovim AppImage..."
+    
+    local tmpdir="/tmp/nvim-install-$$"
+    mkdir -p "$tmpdir"
+    cd "$tmpdir" || return 1
+    
+    curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.appimage || {
         log_error "Failed to download Neovim AppImage"
+        cd - >/dev/null
+        rm -rf "$tmpdir"
         return 1
     }
     
-    chmod +x nvim.appimage
-    sudo mv nvim.appimage /usr/local/bin/nvim || {
-        log_error "Failed to install Neovim (sudo required)"
-        return 1
-    }
+    chmod u+x nvim-linux-x86_64.appimage
     
-    log_success "Neovim AppImage installed"
-    return 0
+    # Try to run AppImage directly first (requires FUSE)
+    if ./nvim-linux-x86_64.appimage --version >/dev/null 2>&1; then
+        log_info "Installing AppImage to /usr/local/bin/nvim..."
+        sudo mv nvim-linux-x86_64.appimage /usr/local/bin/nvim || {
+            log_error "Failed to install Neovim (sudo required)"
+            cd - >/dev/null
+            rm -rf "$tmpdir"
+            return 1
+        }
+        # Set proper permissions so all users can execute
+        sudo chmod 755 /usr/local/bin/nvim
+    else
+        # FUSE not available or AppImage can't run - extract it
+        log_info "FUSE not available, extracting AppImage..."
+        ./nvim-linux-x86_64.appimage --appimage-extract >/dev/null 2>&1 || {
+            log_error "Failed to extract Neovim AppImage"
+            cd - >/dev/null
+            rm -rf "$tmpdir"
+            return 1
+        }
+        
+        # Move extracted files to /usr/local/
+        sudo mkdir -p /usr/local/nvim
+        sudo rm -rf /usr/local/nvim/*
+        sudo mv squashfs-root/* /usr/local/nvim/ || {
+            log_error "Failed to move Neovim files"
+            cd - >/dev/null
+            rm -rf "$tmpdir"
+            return 1
+        }
+        
+        # Create symlink
+        sudo ln -sf /usr/local/nvim/usr/bin/nvim /usr/local/bin/nvim || {
+            log_error "Failed to create nvim symlink"
+            cd - >/dev/null
+            rm -rf "$tmpdir"
+            return 1
+        }
+        # Set proper permissions so all users can execute
+        sudo chmod 755 /usr/local/bin/nvim
+    fi
+    
+    cd - >/dev/null
+    rm -rf "$tmpdir"
+    
+    # Verify installation
+    if command_exists nvim; then
+        log_success "Neovim installed successfully ($(nvim --version | head -1))"
+        return 0
+    else
+        log_error "Neovim installation verification failed"
+        return 1
+    fi
 }
 
 # Setup Git configuration
@@ -542,6 +621,25 @@ change_shell() {
 
 # Main installation menu
 main() {
+    # Check if running as root (which is problematic for config files)
+    if [ "$EUID" -eq 0 ] || [ "$USER" = "root" ]; then
+        echo -e "${RED}"
+        echo "╔═══════════════════════════════════════╗"
+        echo "║          WARNING: ROOT USER           ║"
+        echo "╚═══════════════════════════════════════╝"
+        echo -e "${NC}"
+        log_error "Do not run this script with sudo or as root!"
+        log_error "Run as regular user: ./install.sh"
+        log_error "The script will prompt for sudo when needed."
+        echo ""
+        read -p "Are you sure you want to continue as root? (y/N): " confirm
+        if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+            log_info "Exiting. Please run without sudo."
+            exit 1
+        fi
+        echo ""
+    fi
+    
     echo -e "${GREEN}"
     echo "╔═══════════════════════════════════════╗"
     echo "║     Dotfiles Installation Script      ║"
