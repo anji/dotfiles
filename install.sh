@@ -300,9 +300,9 @@ install_zellij_binary() {
     return 0
 }
 
-# Install Neovim with NvChad
+# Install Neovim with LazyVim
 install_neovim() {
-    log_info "Setting up Neovim with NvChad..."
+    log_info "Setting up Neovim with LazyVim..."
     
     # Check if old version exists and back it up
     if command_exists nvim; then
@@ -355,57 +355,67 @@ install_neovim() {
     # Backup existing nvim config
     backup_if_exists "$HOME/.config/nvim"
     backup_if_exists "$HOME/.local/share/nvim"
+    backup_if_exists "$HOME/.local/state/nvim"
+    backup_if_exists "$HOME/.cache/nvim"
     
     # Remove old config
     rm -rf "$HOME/.config/nvim"
+    rm -rf "$HOME/.local/share/nvim"
+    rm -rf "$HOME/.local/state/nvim"
+    rm -rf "$HOME/.cache/nvim"
     
-    # Install NvChad
-    log_info "Installing NvChad (this will clone the repository, please wait)..."
-    echo "Cloning NvChad from GitHub..."
-    git clone https://github.com/NvChad/NvChad "$HOME/.config/nvim" --depth 1 || {
-        log_error "Failed to install NvChad"
+    # Install LazyVim starter
+    log_info "Installing LazyVim (this will clone the starter template, please wait)..."
+    echo "Cloning LazyVim starter from GitHub..."
+    git clone https://github.com/LazyVim/starter "$HOME/.config/nvim" || {
+        log_error "Failed to install LazyVim"
         return 1
     }
     
-    # Link custom config if it exists
-    if [ -d "$DOTFILES_DIR/nvim/custom" ]; then
-        rm -rf "$HOME/.config/nvim/lua/custom"
-        ln -sf "$DOTFILES_DIR/nvim/custom" "$HOME/.config/nvim/lua/custom" || {
-            log_warning "Failed to link custom Neovim config"
-        }
+    # Remove .git directory from starter to make it your own
+    rm -rf "$HOME/.config/nvim/.git"
+    
+    # Link custom config files if they exist in dotfiles
+    mkdir -p "$HOME/.config/nvim/lua/config"
+    mkdir -p "$HOME/.config/nvim/lua/plugins"
+    
+    # Link or copy custom configs from dotfiles
+    if [ -d "$DOTFILES_DIR/nvim" ]; then
+        # Link lazy.lua for LazyVim configuration overrides
+        if [ -f "$DOTFILES_DIR/nvim/lazy.lua" ]; then
+            ln -sf "$DOTFILES_DIR/nvim/lazy.lua" "$HOME/.config/nvim/lua/config/lazy.lua" || {
+                log_warning "Failed to link lazy.lua"
+            }
+        fi
+        
+        # Link options.lua if exists
+        if [ -f "$DOTFILES_DIR/nvim/options.lua" ]; then
+            ln -sf "$DOTFILES_DIR/nvim/options.lua" "$HOME/.config/nvim/lua/config/options.lua" || {
+                log_warning "Failed to link options.lua"
+            }
+        fi
+        
+        # Link keymaps.lua (LazyVim uses keymaps instead of mappings)
+        if [ -f "$DOTFILES_DIR/nvim/keymaps.lua" ]; then
+            ln -sf "$DOTFILES_DIR/nvim/keymaps.lua" "$HOME/.config/nvim/lua/config/keymaps.lua" || {
+                log_warning "Failed to link keymaps.lua"
+            }
+        fi
+        
+        # Link plugins directory if exists
+        if [ -d "$DOTFILES_DIR/nvim/plugins" ]; then
+            for plugin_file in "$DOTFILES_DIR/nvim/plugins"/*.lua; do
+                if [ -f "$plugin_file" ]; then
+                    ln -sf "$plugin_file" "$HOME/.config/nvim/lua/plugins/$(basename "$plugin_file")" || {
+                        log_warning "Failed to link $(basename "$plugin_file")"
+                    }
+                fi
+            done
+        fi
     fi
     
-    # Link core NvChad config files
-    if [ -f "$DOTFILES_DIR/nvim/init.lua" ]; then
-        rm -f "$HOME/.config/nvim/init.lua"
-        ln -sf "$DOTFILES_DIR/nvim/init.lua" "$HOME/.config/nvim/init.lua" || {
-            log_warning "Failed to link init.lua"
-        }
-    fi
-    
-    if [ -f "$DOTFILES_DIR/nvim/options.lua" ]; then
-        rm -f "$HOME/.config/nvim/lua/options.lua"
-        ln -sf "$DOTFILES_DIR/nvim/options.lua" "$HOME/.config/nvim/lua/options.lua" || {
-            log_warning "Failed to link options.lua"
-        }
-    fi
-    
-    if [ -f "$DOTFILES_DIR/nvim/mappings.lua" ]; then
-        rm -f "$HOME/.config/nvim/lua/mappings.lua"
-        ln -sf "$DOTFILES_DIR/nvim/mappings.lua" "$HOME/.config/nvim/lua/mappings.lua" || {
-            log_warning "Failed to link mappings.lua"
-        }
-    fi
-    
-    if [ -d "$DOTFILES_DIR/nvim/plugins" ]; then
-        rm -rf "$HOME/.config/nvim/lua/plugins"
-        ln -sf "$DOTFILES_DIR/nvim/plugins" "$HOME/.config/nvim/lua/plugins" || {
-            log_warning "Failed to link plugins directory"
-        }
-    fi
-    
-    log_success "Neovim with NvChad setup complete"
-    log_info "Run 'nvim' and wait for plugins to install"
+    log_success "Neovim with LazyVim setup complete"
+    log_info "Run 'nvim' and LazyVim will automatically install all plugins"
     return 0
 }
 
