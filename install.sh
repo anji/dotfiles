@@ -375,43 +375,17 @@ install_neovim() {
     # Remove .git directory from starter to make it your own
     rm -rf "$HOME/.config/nvim/.git"
     
-    # Link custom config files if they exist in dotfiles
-    mkdir -p "$HOME/.config/nvim/lua/config"
-    mkdir -p "$HOME/.config/nvim/lua/plugins"
-    
-    # Link or copy custom configs from dotfiles
-    if [ -d "$DOTFILES_DIR/nvim" ]; then
-        # Link lazy.lua for LazyVim configuration overrides
-        if [ -f "$DOTFILES_DIR/nvim/lazy.lua" ]; then
-            ln -sf "$DOTFILES_DIR/nvim/lazy.lua" "$HOME/.config/nvim/lua/config/lazy.lua" || {
-                log_warning "Failed to link lazy.lua"
-            }
-        fi
+    # Symlink our custom plugins directory to override LazyVim defaults
+    if [ -d "$DOTFILES_DIR/nvim/lua/plugins" ]; then
+        log_info "Linking custom plugin configurations..."
         
-        # Link options.lua if exists
-        if [ -f "$DOTFILES_DIR/nvim/options.lua" ]; then
-            ln -sf "$DOTFILES_DIR/nvim/options.lua" "$HOME/.config/nvim/lua/config/options.lua" || {
-                log_warning "Failed to link options.lua"
-            }
-        fi
-        
-        # Link keymaps.lua (LazyVim uses keymaps instead of mappings)
-        if [ -f "$DOTFILES_DIR/nvim/keymaps.lua" ]; then
-            ln -sf "$DOTFILES_DIR/nvim/keymaps.lua" "$HOME/.config/nvim/lua/config/keymaps.lua" || {
-                log_warning "Failed to link keymaps.lua"
-            }
-        fi
-        
-        # Link plugins directory if exists
-        if [ -d "$DOTFILES_DIR/nvim/plugins" ]; then
-            for plugin_file in "$DOTFILES_DIR/nvim/plugins"/*.lua; do
-                if [ -f "$plugin_file" ]; then
-                    ln -sf "$plugin_file" "$HOME/.config/nvim/lua/plugins/$(basename "$plugin_file")" || {
-                        log_warning "Failed to link $(basename "$plugin_file")"
-                    }
-                fi
-            done
-        fi
+        # Remove the default plugins directory and create symlink
+        rm -rf "$HOME/.config/nvim/lua/plugins"
+        ln -sf "$DOTFILES_DIR/nvim/lua/plugins" "$HOME/.config/nvim/lua/plugins" && {
+            log_success "Linked plugins directory"
+        } || {
+            log_warning "Failed to link plugins directory"
+        }
     fi
     
     log_success "Neovim with LazyVim setup complete"
@@ -682,7 +656,7 @@ main() {
         
         echo ""
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-        echo "Step 4/7: Setting up Neovim with NvChad..."
+        echo "Step 4/7: Setting up Neovim with LazyVim..."
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         install_neovim || failed_components+=("neovim")
         
@@ -721,7 +695,7 @@ main() {
         echo "1) All components"
         echo "2) Zsh (with Oh-My-Zsh)"
         echo "3) Zellij"
-        echo "4) Neovim (with NvChad)"
+        echo "4) Neovim (with LazyVim)"
         echo "5) Git configuration"
         echo "6) Additional tools (fzf, aliases, etc.)"
         echo "7) Install system packages"
